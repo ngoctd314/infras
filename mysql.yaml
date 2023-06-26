@@ -1,33 +1,48 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: mysql-pvc
+  name: mysql-pv
 spec:
   capacity:
-    storage: 2Gi
-  volumeMode: Filesystem
+    storage: 1Gi
+  # volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Recycle
-  storageClassName: slow
-  mountOptions:
-    - hard
-    - nfsvers=4.1
-  nfs:
-    path: /tmp
-    server: 172.17.0.2
+  # persistentVolumeReclaimPolicy: Recycle
+  storageClassName: mysql-class
+  # A hostpath volume mounts a file or directory from the host node's file system into pod
+  hostPath:
+    path: "/mnt/data/mysql"
+  # mountOptions:
+  #   - hard
+  #   - nfsvers=4.1
+  # nfs:
+  #   path: /tmp
+  #   server: 172.17.0.2
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mysql-pv
+  name: mysql-pvc
 spec:
+  # map to storageClassNamem in pv
+  storageClassName: mysql-class
   resources:
     requests:
-      storage: 2Gi
-  volumeMode: Filesystem
+      storage: 1Gi
+  # volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  MYSQL_DATABASE: db
+  MYSQL_USER: admin
+  MYSQL_PASSWORD: secret
+  MYSQL_ROOT_PASSWORD: secret
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -36,39 +51,40 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: myapp
-  serviceName: <ServiceName>
-  replicas: 2
+      app: mysql-db
+  serviceName: mysql-db
+  replicas: 1
   template:
     metadata:
       labels:
-        app: myapp
+        app: mysql-db
     spec:
       containers:
-        - name: myapp
-          image: registry.k8s.io/nginx-slim:0.8
+        - name: mysql-db
+          image: mysql:5.7
+          imagePullPolicy: "IfNotPresent"
           ports:
-            - containerPort: 80
-              name: web
+            - containerPort: 3306
+          envFrom:
+            - configMapRef:
+                name: mysql-config
           volumeMounts:
-            - name: www
-              mountPath: /usr/share/nginx/html
-  volumeClaimTemplates:
-    - metadata:
-        name: www
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 1Gi
+            - name: data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mysql-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: mysql-srv
 spec:
+  type: NodePort
   selector:
-    app: myapp
+    app: mysql-db
   ports:
     - port: 3306
-      targetPort: <Target Port>
+      targetPort: 3306
+      nodePort: 30200
