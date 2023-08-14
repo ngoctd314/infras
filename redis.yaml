@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: iam-redis-depl
+  name: redis-depl
 spec:
   selector:
     matchLabels:
-      app: iam-redis
+      app: redis
   template:
     metadata:
       labels:
-        app: iam-redis
+        app: redis
     spec:
       containers:
-        - name: iam-redis
+        - name: redis
           image: redis:6.0
           resources:
             limits:
@@ -24,12 +24,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: iam-redis-srv
+  name: redis-srv
 spec:
   type: NodePort
   selector:
-    app: iam-redis
+    app: redis
   ports:
     - port: 6379
       targetPort: 6379
-      nodePort: 30201
+      nodePort: 30301
