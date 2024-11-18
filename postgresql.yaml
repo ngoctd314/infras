@@ -30,6 +30,7 @@ data:
   POSTGRES_DB: db
   POSTGRES_USER: admin
   POSTGRES_PASSWORD: secret
+  POSTGRES_ROOT_PASSWORD: secret
 ---
 apiVersion: apps/v1
 kind: StatefulSet
